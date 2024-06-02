@@ -1,48 +1,65 @@
 import numpy as np
 import time
-from tqdm import tqdm
 from Bio import SeqIO
 import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix
+from tqdm import tqdm
 
 def merge_sequences_from_fasta(file_path):
-    sequences = []  # List to store all sequences
+    sequences = []
     for record in SeqIO.parse(file_path, "fasta"):
         sequences.append(str(record.seq))
     return "".join(sequences)
 
 def sequence_to_int8(sequence):
-    # Convert the sequence to np.int8
-    return np.array([ord(char) for char in sequence], dtype=np.int8)
+    base_to_int = {'A': 1, 'C': 2, 'G': 3, 'T': 4}
+    return np.array([base_to_int[base] for base in sequence], dtype=np.int8)
+
+def dotplot(seq1, seq2, window_size):
+    matrix = lil_matrix((len(seq1), len(seq2)), dtype=np.int8)
+    
+    for i in tqdm(range(len(seq1) - window_size + 1), desc="Dotplot Progress"):
+        for j in range(len(seq2) - window_size + 1):
+            if np.array_equal(seq1[i:i+window_size], seq2[j:j+window_size]):
+                matrix[i, j] = 1
+    
+    return matrix.tocsc()
 
 file_path_1 = "./dotplot_files/E_coli.fna"
 file_path_2 = "./dotplot_files/Salmonella.fna"
 
-merged_sequence_1 = merge_sequences_from_fasta(file_path_1) # estas son las secuencias que se van a utilizar para el dotplot
+start_time = time.time()
+
+merged_sequence_1 = merge_sequences_from_fasta(file_path_1)
 merged_sequence_2 = merge_sequences_from_fasta(file_path_2)
 
 seq1_int8 = sequence_to_int8(merged_sequence_1)
 seq2_int8 = sequence_to_int8(merged_sequence_2)
 
+data_load_time = time.time() - start_time
+
 print(len(seq1_int8))
 print(len(seq2_int8))
 
-begin = time.time()
-dotplot = lil_matrix((len(seq1_int8), len(seq2_int8)), dtype=np.int8)
-print("La matriz de resultado tiene tamaño: ", dotplot.shape)
+window_size = 10
 
-for i in tqdm(range(dotplot.shape[0])):
-    for j in range(dotplot.shape[1]):
-        if seq1_int8[i] == seq2_int8[j]:
-            dotplot[i, j] = 1
+start_time = time.time()
 
-print(f"\n El código se ejecutó en: {time.time() - begin} segundos")
+dotplot_matrix = dotplot(seq1_int8, seq2_int8, window_size)
 
-def draw_dotplot(matrix, fig_name='dotplot.svg'):
-    plt.figure(figsize=(5, 5))
-    plt.imshow(matrix.toarray(), cmap='Greys', aspect='auto')
-    plt.ylabel("Secuencia 1")
-    plt.xlabel("Secuencia 2")
-    plt.savefig(fig_name)
+computation_time = time.time() - start_time
 
-draw_dotplot(dotplot)
+print(f"Data load time: {data_load_time} seconds")
+print(f"Computation time: {computation_time} seconds")
+
+start_time = time.time()
+
+plt.figure(figsize=(5, 5))
+plt.imshow(dotplot_matrix.toarray(), cmap='Greys', aspect='auto')
+plt.ylabel("Sequence 1")
+plt.xlabel("Sequence 2")
+plt.savefig('dotplot.png')
+
+image_generation_time = time.time() - start_time
+
+print(f"Image generation time: {image_generation_time} seconds")
