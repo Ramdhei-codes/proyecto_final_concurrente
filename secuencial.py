@@ -1,51 +1,43 @@
 import numpy as np
-from tqdm import tqdm
+import time
+from tqdm import tqdm 
 from Bio import SeqIO
 import matplotlib.pyplot as plt
-from scipy.sparse import lil_matrix
 
 def merge_sequences_from_fasta(file_path):
-    sequences = []
+    sequences = []  # List to store all sequences
     for record in SeqIO.parse(file_path, "fasta"):
+        # `record.seq` gives the sequence
         sequences.append(str(record.seq))
     return "".join(sequences)
-
-def sequence_to_int8(sequence):
-    return np.array([ord(char) for char in sequence], dtype=np.int8)
-
-def generate_dotplot(seq1, seq2):
-    len_seq1 = len(seq1)
-    len_seq2 = len(seq2)
-    
-    dotplot_matrix = lil_matrix((len_seq1, len_seq2), dtype=np.int8)
-    
-    for i in tqdm(range(len_seq1)):
-        for j in range(len_seq2):
-            if seq1[i] == seq2[j]:
-                dotplot_matrix[i, j] = 1
-    
-    return dotplot_matrix
-
-def plot_dotplot(dotplot_matrix, seq1, seq2):
-    plt.figure(figsize=(10, 10))
-    plt.spy(dotplot_matrix, markersize=1)
-    plt.title('Dotplot')
-    plt.xlabel('Sequence 1')
-    plt.ylabel('Sequence 2')
-    plt.show()
 
 file_path_1 = "./dotplot_files/E_coli.fna"
 file_path_2 = "./dotplot_files/Salmonella.fna"
 
-merged_sequence_1 = merge_sequences_from_fasta(file_path_1)
+merged_sequence_1 = merge_sequences_from_fasta(file_path_1) # estas son las secuencias que se van a utilizar para el dotplot
 merged_sequence_2 = merge_sequences_from_fasta(file_path_2)
 
-seq1_int8 = sequence_to_int8(merged_sequence_1)
-seq2_int8 = sequence_to_int8(merged_sequence_2)
+print(len(merged_sequence_1))
+print(len(merged_sequence_2))
 
-print("Length of Sequence 1:", len(seq1_int8))
-print("Length of Sequence 2:", len(seq2_int8))
+begin = time.time()
+dotplot = np.empty([len(merged_sequence_1),len(merged_sequence_2)])
+print("La matriz de resultado tiene tamaño: ", dotplot.shape)
 
-dotplot_matrix = generate_dotplot(seq1_int8, seq2_int8)
+for i in tqdm(range(dotplot.shape[0])):
+  for j in range(dotplot.shape[1]):
+    if merged_sequence_1[i] == merged_sequence_2[j]:
+      dotplot[i,j] = 1
+    else:
+      dotplot[i,j] = 0
 
-plot_dotplot(dotplot_matrix, seq1_int8, seq2_int8)
+print(f"\n El código se ejecutó en: {time.time() - begin} segundos")
+
+
+def draw_dotplot(matrix, fig_name='dotplot.svg'):
+  plt.figure(figsize=(5,5))
+  plt.imshow(matrix, cmap='Greys',aspect='auto')
+
+  plt.ylabel("Secuencia 1")
+  plt.xlabel("Secuencia 2")
+  plt.savefig(fig_name)
