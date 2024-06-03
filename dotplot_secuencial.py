@@ -3,7 +3,7 @@ from Bio import SeqIO
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.sparse import coo_matrix, save_npz
+from scipy.sparse import coo_matrix
 
 def read_fasta(file_path, max_length=None):
     """Lee una secuencia de un archivo FASTA y devuelve la secuencia."""
