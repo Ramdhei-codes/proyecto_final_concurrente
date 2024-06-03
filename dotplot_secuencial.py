@@ -18,11 +18,14 @@ def generate_dotplot(seq1, seq2, window_size=1):
     len1, len2 = len(seq1), len(seq2)
     rows, cols = [], []
 
+    seq1_array = np.array(list(seq1))
+    seq2_array = np.array(list(seq2))
+
     for i in tqdm(range(len1 - window_size + 1), desc="Generando dotplot"):
-        for j in range(len2 - window_size + 1):
-            if seq1[i:i+window_size] == seq2[j:j+window_size]:
-                rows.append(i)
-                cols.append(j)
+        sub_seq1 = seq1_array[i:i + window_size]
+        matches = np.where((seq2_array[:len2 - window_size + 1] == sub_seq1[:, None]).all(axis=0))[0]
+        rows.extend([i] * len(matches))
+        cols.extend(matches)
     
     dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=int)
     return dotplot.tocsr()
