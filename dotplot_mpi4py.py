@@ -3,8 +3,10 @@ from Bio import SeqIO
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.sparse import coo_matrix, save_npz, load_npz
+from scipy.sparse import coo_matrix
 from mpi4py import MPI
+import sys
+import time
 
 def read_fasta(file_path, max_length=None):
     """Lee una secuencia de un archivo FASTA y devuelve la secuencia."""
@@ -25,11 +27,15 @@ def generate_dotplot_parallel(seq1, seq2, window_size=1, comm=None):
     seq1_array = np.array(list(seq1))
     seq2_array = np.array(list(seq2))
 
-    for i in tqdm(range(rank, len1 - window_size + 1, size), desc=f"Proceso {rank}"):
-        sub_seq1 = seq1_array[i:i + window_size]
-        matches = np.where((seq2_array[:len2 - window_size + 1] == sub_seq1[:, None]).all(axis=0))[0]
-        rows.extend([i] * len(matches))
-        cols.extend(matches)
+    try:
+        for i in tqdm(range(rank, len1 - window_size + 1, size), desc=f"Proceso {rank}"):
+            sub_seq1 = seq1_array[i:i + window_size]
+            matches = np.where((seq2_array[:len2 - window_size + 1] == sub_seq1[:, None]).all(axis=0))[0]
+            rows.extend([i] * len(matches))
+            cols.extend(matches)
+    except MemoryError:
+        print(f"Error de memoria en el proceso {rank}: No es posible generar el dotplot con las secuencias dadas debido a limitaciones de memoria.")
+        comm.Abort()
 
     local_dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=np.uint8)
 
@@ -49,13 +55,17 @@ def generate_dotplot_parallel(seq1, seq2, window_size=1, comm=None):
 
 def plot_dotplot(dotplot, output_file):
     """Dibuja y guarda la imagen del dotplot."""
+    start_time = time.time()  # Tiempo inicial para la generación de la imagen
     plt.imshow(dotplot.toarray(), cmap='Greys', interpolation='none')
     plt.savefig(output_file, format='png')
     plt.close()
+    end_time = time.time()  # Tiempo final para la generación de la imagen
+    print(f"Tiempo para generar y guardar la imagen: {end_time - start_time:.2f} segundos")
 
 def main(file1, file2, output_file, max_length):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
+    start_time = time.time()  # Tiempo inicial para la ejecución del programa
 
     if rank == 0:
         seq1 = read_fasta(file1, max_length)
@@ -69,10 +79,19 @@ def main(file1, file2, output_file, max_length):
     seq1 = comm.bcast(seq1, root=0)
     seq2 = comm.bcast(seq2, root=0)
 
-    dotplot = generate_dotplot_parallel(seq1, seq2, comm=comm)
+    calc_start_time = time.time()  # Tiempo inicial para los cálculos
+    try:
+        dotplot = generate_dotplot_parallel(seq1, seq2, comm=comm)
+    except MemoryError:
+        print("Error de memoria durante la ejecución principal.")
+        comm.Abort()
+    calc_end_time = time.time()  # Tiempo final para los cálculos
 
-    if rank == 0:
+    if rank == 0 and dotplot is not None:
+        print(f"Tiempo de cálculo para generar el dotplot: {calc_end_time - calc_start_time:.2f} segundos")
         plot_dotplot(dotplot, output_file)
+        end_time = time.time()  # Tiempo final para la ejecución del programa
+        print(f"Tiempo total de ejecución del programa: {end_time - start_time:.2f} segundos")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generar dotplot de dos secuencias FASTA utilizando MPI.")
@@ -84,3 +103,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.file1, args.file2, args.output, args.max_length)
+
+# Ejecutar con varios procesos
+# mpiexec -n 4 python dotplot_mpi4py.py --file1=./dotplot_files/E_coli.fna --file2=./dotplot_files/Salmonella.fna --output=dotplot_mpi.png --max_length=10000
