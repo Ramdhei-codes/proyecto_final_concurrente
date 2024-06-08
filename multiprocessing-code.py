@@ -1,89 +1,102 @@
-import numpy as np
-import time
-from Bio import SeqIO
-import matplotlib.pyplot as plt
-from scipy.sparse import lil_matrix, csc_matrix, vstack
-from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
 import argparse
+from Bio import SeqIO
+import numpy as np
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+from scipy.sparse import coo_matrix
+import sys
+import multiprocessing as mp
 
-def merge_sequences_from_fasta(file_path):
-    sequences = []
+def read_fasta(file_path, max_length=None):
+    """Lee una secuencia de un archivo FASTA y devuelve la secuencia."""
     for record in SeqIO.parse(file_path, "fasta"):
-        sequences.append(str(record.seq))
-    return "".join(sequences)
+        sequence = str(record.seq)
+        if max_length:
+            sequence = sequence[:max_length]
+        return sequence
 
-def sequence_to_int8(sequence):
-    base_to_int = {'A': 1, 'C': 2, 'G': 3, 'T': 4}
-    return np.array([base_to_int[base] for base in sequence], dtype=np.int8)
+def compare_subsequences(seq1_array, seq2_array, window_size, start, end, output_queue):
+    """Compara sub-secuencias y guarda las coincidencias en una cola."""
+    rows, cols = [], []
+    len2 = len(seq2_array)
+    print(f"Proceso iniciado: rango {start}-{end}")  # Depuración
 
-def dotplot_chunk_optimized(args):
-    seq1, seq2, i_start, i_end, window_size = args
-    chunk_matrix = lil_matrix((i_end - i_start, len(seq2) - window_size + 1), dtype=np.int8)
+    for i in range(start, end):
+        sub_seq1 = seq1_array[i:i + window_size]
+        matches = np.where((seq2_array[:len2 - window_size + 1] == sub_seq1[:, None]).all(axis=0))[0]
+        rows.extend([i] * len(matches))
+        cols.extend(matches)
 
-    for i in tqdm(range(i_start, i_end), desc=f"Process {i_start}-{i_end} progress"):
-        windows_seq1 = np.lib.stride_tricks.sliding_window_view(seq1[i:i + window_size], window_shape=window_size)
-        windows_seq2 = np.lib.stride_tricks.sliding_window_view(seq2, window_shape=window_size)
-        match_matrix = (windows_seq1[:, None, :] == windows_seq2).all(axis=-1)
-        chunk_matrix[i - i_start, :] = match_matrix.any(axis=1).astype(np.int8)
+    output_queue.put((rows, cols))
+    print(f"Proceso terminado: rango {start}-{end}, filas: {len(rows)}, columnas: {len(cols)}")  # Depuración
 
-    return chunk_matrix.tocsr()
+def generate_dotplot(seq1, seq2, window_size=1, num_processes=4):
+    """Genera una matriz dispersa de dotplot para dos secuencias utilizando multiprocessing."""
+    len1, len2 = len(seq1), len(seq2)
+    seq1_array = np.array(list(seq1))
+    seq2_array = np.array(list(seq2))
 
-def parallel_dotplot_optimized(seq1, seq2, window_size, num_processes):
-    pool = Pool(processes=num_processes)
-    chunk_size = len(seq1) // num_processes
-    chunks = [(seq1, seq2, i, min(i + chunk_size, len(seq1)), window_size)
-              for i in range(0, len(seq1), chunk_size)]
+    chunk_size = len1 // num_processes
+    processes = []
+    output_queue = mp.Queue()
 
-    chunk_results = list(tqdm(pool.imap(dotplot_chunk_optimized, chunks), total=len(chunks)))
-    pool.close()
-    pool.join()
+    try:
+        for i in range(num_processes):
+            start = i * chunk_size
+            end = len1 if i == num_processes - 1 else (i + 1) * chunk_size
+            p = mp.Process(target=compare_subsequences, args=(seq1_array, seq2_array, window_size, start, end, output_queue))
+            processes.append(p)
+            p.start()
 
-    matrix = vstack(chunk_results)
-    return matrix
+        rows, cols = [], []
+        for _ in range(num_processes):
+            r, c = output_queue.get()
+            rows.extend(r)
+            cols.extend(c)
 
-def main(file1, file2, output_file, max_length, num_processes=cpu_count()):
-    start_time = time.time()
+        for p in processes:
+            p.join()
 
-    merged_sequence_1 = merge_sequences_from_fasta(file1)[0:max_length]
-    merged_sequence_2 = merge_sequences_from_fasta(file2)[0:max_length]
+    except MemoryError:
+        print("Error de memoria: No es posible generar el dotplot con las secuencias dadas debido a limitaciones de memoria.")
+        sys.exit(1)
 
-    seq1_int8 = sequence_to_int8(merged_sequence_1)
-    seq2_int8 = sequence_to_int8(merged_sequence_2)
+    print(f"Total filas: {len(rows)}, Total columnas: {len(cols)}")  # Depuración final
+    dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=int)
+    return dotplot.tocsr()
 
-    data_load_time = time.time() - start_time
+def plot_dotplot(dotplot, output_file):
+    """Dibuja y guarda la imagen del dotplot."""
+    plt.imshow(dotplot.toarray(), cmap='Greys', interpolation='none')
+    plt.savefig(output_file, format='png')
+    plt.close()
 
-    window_size = 10 
-
-    start_time = time.time()
-
-    dotplot_matrix = parallel_dotplot_optimized(seq1_int8, seq2_int8, window_size, num_processes)
-
-    computation_time = time.time() - start_time
-
-    print(f"Data load time: {data_load_time} seconds")
-    print(f"Computation time: {computation_time} seconds")
-
-    start_time = time.time()
-
-    plt.figure(figsize=(10, 10))
-    plt.imshow(dotplot_matrix.toarray(), cmap='Greys', aspect='auto')
-    plt.ylabel("Sequence 1")
-    plt.xlabel("Sequence 2")
-    plt.savefig(output_file)
-
-    image_generation_time = time.time() - start_time
-
-    print(f"Image generation time: {image_generation_time} seconds")
+def main(file1, file2, output_file, max_length, num_processes):
+    try:
+        seq1 = read_fasta(file1, max_length)
+        seq2 = read_fasta(file2, max_length)
+        
+        print(f"Longitud de la secuencia 1: {len(seq1)}")
+        print(f"Longitud de la secuencia 2: {len(seq2)}")
+        
+        dotplot = generate_dotplot(seq1, seq2, num_processes=num_processes)
+        if dotplot is not None:
+            plot_dotplot(dotplot, output_file)
+    except MemoryError:
+        print("Error de memoria durante la ejecución principal.")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generar dotplot de dos secuencias utilizando hilos")
+    parser = argparse.ArgumentParser(description="Generar dotplot de dos secuencias FASTA.")
     parser.add_argument("--file1", required=True, help="Archivo FASTA de la primera secuencia.")
     parser.add_argument("--file2", required=True, help="Archivo FASTA de la segunda secuencia.")
     parser.add_argument("--output", required=True, help="Archivo de salida para la imagen del dotplot.")
-    parser.add_argument("--max_length", type=int, default=1000, help="Número máximo de caracteres a procesar de cada secuencia.")
-    parser.add_argument("--num_processes", type=int, default=cpu_count(), help="Número de procesos para procesar la secuencia (Los hilos de la CPU por defecto).")
-
+    parser.add_argument("--max_length", type=int, default=None, help="Número máximo de caracteres a procesar de cada secuencia.")
+    parser.add_argument("--num_processes", type=int, default=4, help="Número de procesos a utilizar.")
+    
     args = parser.parse_args()
-
+    
     main(args.file1, args.file2, args.output, args.max_length, args.num_processes)
+
+# Ejecutar el script con los argumentos necesarios
+# python multiprocessing-code.py --file1=./dotplot_files/E_coli.fna --file2=./dotplot_files/Salmonella.fna --output=dotplot_multiptocessing.png --max_length=1000
