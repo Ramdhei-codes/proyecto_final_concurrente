@@ -56,3 +56,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     main(args.file1, args.file2, args.output, args.max_length)
+
+# Ejecutar con:
+# python dotplot_secuencial.py --file1=./dotplot_files/E_coli.fna --file2=./dotplot_files/Salmonella.fna --output=dotplot_secuencial.png --max_length=50000
