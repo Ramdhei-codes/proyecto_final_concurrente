@@ -27,7 +27,18 @@ def worker(merged_sequence_1, merged_sequence_2, task_queue, result_queue):
         compute_dotplot_section(start_i, end_i, start_j, end_j, merged_sequence_1, merged_sequence_2, result_queue)
         task_queue.task_done()
 
+def draw_dotplot(matrix, fig_name):
+    start_time = time.time()  # Tiempo inicial para la generación de la imagen
+    plt.imshow(matrix, cmap='Greys', interpolation='none')
+    plt.ylabel("Secuencia 1")
+    plt.xlabel("Secuencia 2")
+    plt.savefig(fig_name)
+    plt.close()
+    end_time = time.time()  # Tiempo final para la generación de la imagen
+    print(f"Tiempo para generar y guardar la imagen: {end_time - start_time:.2f} segundos")
+
 def main(file1, file2, output_file, max_length, num_threads=4):
+    start_time = time.time()  # Tiempo inicial para la ejecución del programa
 
     merged_sequence_1 = merge_sequences_from_fasta(file1)[0:max_length]
     merged_sequence_2 = merge_sequences_from_fasta(file2)[0:max_length]
@@ -35,9 +46,7 @@ def main(file1, file2, output_file, max_length, num_threads=4):
     print(len(merged_sequence_1))
     print(len(merged_sequence_2))
 
-    begin = time.time()
-    block_size = max_length//num_threads
-
+    block_size = max_length // num_threads
 
     task_queue = Queue()
     result_queue = Queue()
@@ -59,6 +68,8 @@ def main(file1, file2, output_file, max_length, num_threads=4):
     for thread in threads:
         thread.join()
 
+    calc_end_time = time.time()  # Tiempo final para los cálculos
+
     dotplot = np.zeros([len(merged_sequence_1), len(merged_sequence_2)], dtype=np.uint8)
 
     while not result_queue.empty():
@@ -67,15 +78,12 @@ def main(file1, file2, output_file, max_length, num_threads=4):
         end_j = start_j + local_dotplot.shape[1]
         dotplot[start_i:end_i, start_j:end_j] = local_dotplot
 
-    print(f"\n El código se ejecutó en: {time.time() - begin} segundos")
+    print(f"Tiempo de cálculo para generar el dotplot: {calc_end_time - start_time:.2f} segundos")
 
-    def draw_dotplot(matrix, fig_name=output_file):
-        plt.imshow(matrix, cmap='Greys', interpolation='none')
-        plt.ylabel("Secuencia 1")
-        plt.xlabel("Secuencia 2")
-        plt.savefig(fig_name)
+    draw_dotplot(dotplot, output_file)
 
-    draw_dotplot(dotplot)
+    end_time = time.time()  # Tiempo final para la ejecución del programa
+    print(f"Tiempo total de ejecución del programa: {end_time - start_time:.2f} segundos")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generar dotplot de dos secuencias utilizando hilos")
@@ -90,4 +98,4 @@ if __name__ == "__main__":
     main(args.file1, args.file2, args.output, args.max_length, args.num_threads)
 
 # ejecutar con:  
-# python .\dotplot_secuencial.py --file1 .\dotplot_files\Salmonella.fna --file2 .\dotplot_files\E_coli.fna --max_length 10000 --output .\dotplot_secuencial.png
+# python .\dotplot_hilos.py --file1 .\dotplot_files\Salmonella.fna --file2 .\dotplot_files\E_coli.fna --max_length 10000 --output .\dotplot_hilos.png
