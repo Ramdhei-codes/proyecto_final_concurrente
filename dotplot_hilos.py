@@ -14,11 +14,12 @@ def merge_sequences_from_fasta(file_path):
     return "".join(sequences)
 
 def compute_dotplot_section(start_i, end_i, start_j, end_j, merged_sequence_1, merged_sequence_2, result_queue):
-    local_dotplot = np.zeros((end_i - start_i, end_j - start_j), dtype=np.uint8)
-    for i in tqdm(range(end_i - start_i), f'Índices {start_i} - {end_i}, {start_j} - {end_j} {threading.current_thread().name}'):
-        for j in range(end_j - start_j):
-            if merged_sequence_1[start_i + i] == merged_sequence_2[start_j + j]:
-                local_dotplot[i, j] = 1
+    sub_seq1 = np.array(list(merged_sequence_1[start_i:end_i]))
+    sub_seq2 = np.array(list(merged_sequence_2[start_j:end_j]))
+    
+    # Create a boolean matrix where True indicates a match
+    local_dotplot = (sub_seq1[:, None] == sub_seq2).astype(np.uint8)
+    
     result_queue.put((start_i, start_j, local_dotplot))
 
 def worker(merged_sequence_1, merged_sequence_2, task_queue, result_queue):
