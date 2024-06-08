@@ -84,3 +84,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.file1, args.file2, args.output, args.max_length)
+
+# Ejecutar con 4 procesos
+# mpiexec -n 16 python dotplot_mpi4py.py --file1=./dotplot_files/E_coli.fna --file2=./dotplot_files/Salmonella.fna --output=dotplot_mpi.png --max_length=10000
