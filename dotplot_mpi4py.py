@@ -3,9 +3,10 @@ from Bio import SeqIO
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.sparse import coo_matrix, save_npz, load_npz
+from scipy.sparse import coo_matrix
 from mpi4py import MPI
 import sys
+import time
 
 def read_fasta(file_path, max_length=None):
     """Lee una secuencia de un archivo FASTA y devuelve la secuencia."""
@@ -54,13 +55,17 @@ def generate_dotplot_parallel(seq1, seq2, window_size=1, comm=None):
 
 def plot_dotplot(dotplot, output_file):
     """Dibuja y guarda la imagen del dotplot."""
+    start_time = time.time()  # Tiempo inicial para la generación de la imagen
     plt.imshow(dotplot.toarray(), cmap='Greys', interpolation='none')
     plt.savefig(output_file, format='png')
     plt.close()
+    end_time = time.time()  # Tiempo final para la generación de la imagen
+    print(f"Tiempo para generar y guardar la imagen: {end_time - start_time:.2f} segundos")
 
 def main(file1, file2, output_file, max_length):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
+    start_time = time.time()  # Tiempo inicial para la ejecución del programa
 
     if rank == 0:
         seq1 = read_fasta(file1, max_length)
@@ -74,14 +79,19 @@ def main(file1, file2, output_file, max_length):
     seq1 = comm.bcast(seq1, root=0)
     seq2 = comm.bcast(seq2, root=0)
 
+    calc_start_time = time.time()  # Tiempo inicial para los cálculos
     try:
         dotplot = generate_dotplot_parallel(seq1, seq2, comm=comm)
     except MemoryError:
         print("Error de memoria durante la ejecución principal.")
         comm.Abort()
+    calc_end_time = time.time()  # Tiempo final para los cálculos
 
     if rank == 0 and dotplot is not None:
+        print(f"Tiempo de cálculo para generar el dotplot: {calc_end_time - calc_start_time:.2f} segundos")
         plot_dotplot(dotplot, output_file)
+        end_time = time.time()  # Tiempo final para la ejecución del programa
+        print(f"Tiempo total de ejecución del programa: {end_time - start_time:.2f} segundos")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generar dotplot de dos secuencias FASTA utilizando MPI.")
