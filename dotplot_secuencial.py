@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.sparse import coo_matrix
+import time
 
 def read_fasta(file_path, max_length=None):
     """Lee una secuencia de un archivo FASTA y devuelve la secuencia."""
@@ -31,7 +32,7 @@ def generate_dotplot(seq1, seq2, window_size=1):
         print("Error de memoria: No es posible generar el dotplot con las secuencias dadas debido a limitaciones de memoria.")
         return None
     
-    dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=int)
+    dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=np.uint8)
     return dotplot.tocsr()
 
 def plot_dotplot(dotplot, output_file):
@@ -47,7 +48,9 @@ def main(file1, file2, output_file, max_length):
     print(f"Longitud de la secuencia 1: {len(seq1)}")
     print(f"Longitud de la secuencia 2: {len(seq2)}")
     
+    inicio = time.time()
     dotplot = generate_dotplot(seq1, seq2)
+    print(f'Tiempo de ejecución para la generación del dotplot: {time.time()-inicio}')
     if dotplot is not None:
         plot_dotplot(dotplot, output_file)
     else:
