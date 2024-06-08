@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.sparse import coo_matrix
+import time
 
 def read_fasta(file_path, max_length=None):
     """Lee una secuencia de un archivo FASTA y devuelve la secuencia."""
@@ -36,22 +37,34 @@ def generate_dotplot(seq1, seq2, window_size=1):
 
 def plot_dotplot(dotplot, output_file):
     """Dibuja y guarda la imagen del dotplot."""
+    start_time = time.time()  # Tiempo inicial para la generación de la imagen
     plt.imshow(dotplot.toarray(), cmap='Greys', interpolation='none')
     plt.savefig(output_file, format='png')
     plt.close()
+    end_time = time.time()  # Tiempo final para la generación de la imagen
+    print(f"Tiempo para generar y guardar la imagen: {end_time - start_time:.2f} segundos")
 
 def main(file1, file2, output_file, max_length):
+    start_time = time.time()  # Tiempo inicial para la ejecución del programa
+
     seq1 = read_fasta(file1, max_length)
     seq2 = read_fasta(file2, max_length)
     
     print(f"Longitud de la secuencia 1: {len(seq1)}")
     print(f"Longitud de la secuencia 2: {len(seq2)}")
     
+    calc_start_time = time.time()  # Tiempo inicial para los cálculos
     dotplot = generate_dotplot(seq1, seq2)
+    calc_end_time = time.time()  # Tiempo final para los cálculos
+    
     if dotplot is not None:
+        print(f"Tiempo de cálculo para generar el dotplot: {calc_end_time - calc_start_time:.2f} segundos")
         plot_dotplot(dotplot, output_file)
     else:
         print("No se pudo generar el dotplot debido a un error de memoria.")
+    
+    end_time = time.time()  # Tiempo final para la ejecución del programa
+    print(f"Tiempo total de ejecución del programa: {end_time - start_time:.2f} segundos")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generar dotplot de dos secuencias FASTA.")
