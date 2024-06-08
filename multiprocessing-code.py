@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix, csc_matrix, vstack
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
+import argparse
 
 def merge_sequences_from_fasta(file_path):
     sequences = []
@@ -41,42 +42,48 @@ def parallel_dotplot_optimized(seq1, seq2, window_size, num_processes):
     matrix = vstack(chunk_results)
     return matrix
 
-file_path_1 = "./dotplot_files/E_coli.fna"
-file_path_2 = "./dotplot_files/Salmonella.fna"
+def main(file1, file2, output_file, max_length, num_processes=cpu_count()):
+    start_time = time.time()
 
-start_time = time.time()
+    merged_sequence_1 = merge_sequences_from_fasta(file1)[0:max_length]
+    merged_sequence_2 = merge_sequences_from_fasta(file2)[0:max_length]
 
-merged_sequence_1 = merge_sequences_from_fasta(file_path_1)
-merged_sequence_2 = merge_sequences_from_fasta(file_path_2)
+    seq1_int8 = sequence_to_int8(merged_sequence_1)
+    seq2_int8 = sequence_to_int8(merged_sequence_2)
 
-seq1_int8 = sequence_to_int8(merged_sequence_1)
-seq2_int8 = sequence_to_int8(merged_sequence_2)
+    data_load_time = time.time() - start_time
 
-data_load_time = time.time() - start_time
+    window_size = 10 
 
-print(len(seq1_int8))
-print(len(seq2_int8))
+    start_time = time.time()
 
-window_size = 10
-num_processes = cpu_count()  # Use the number of CPU cores available
+    dotplot_matrix = parallel_dotplot_optimized(seq1_int8, seq2_int8, window_size, num_processes)
 
-start_time = time.time()
+    computation_time = time.time() - start_time
 
-dotplot_matrix = parallel_dotplot_optimized(seq1_int8, seq2_int8, window_size, num_processes)
+    print(f"Data load time: {data_load_time} seconds")
+    print(f"Computation time: {computation_time} seconds")
 
-computation_time = time.time() - start_time
+    start_time = time.time()
 
-print(f"Data load time: {data_load_time} seconds")
-print(f"Computation time: {computation_time} seconds")
+    plt.figure(figsize=(10, 10))
+    plt.imshow(dotplot_matrix.toarray(), cmap='Greys', aspect='auto')
+    plt.ylabel("Sequence 1")
+    plt.xlabel("Sequence 2")
+    plt.savefig(output_file)
 
-start_time = time.time()
+    image_generation_time = time.time() - start_time
 
-plt.figure(figsize=(10, 10))
-plt.imshow(dotplot_matrix.toarray(), cmap='Greys', aspect='auto')
-plt.ylabel("Sequence 1")
-plt.xlabel("Sequence 2")
-plt.savefig('dotplot.png')
+    print(f"Image generation time: {image_generation_time} seconds")
 
-image_generation_time = time.time() - start_time
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generar dotplot de dos secuencias utilizando hilos")
+    parser.add_argument("--file1", required=True, help="Archivo FASTA de la primera secuencia.")
+    parser.add_argument("--file2", required=True, help="Archivo FASTA de la segunda secuencia.")
+    parser.add_argument("--output", required=True, help="Archivo de salida para la imagen del dotplot.")
+    parser.add_argument("--max_length", type=int, default=1000, help="Número máximo de caracteres a procesar de cada secuencia.")
+    parser.add_argument("--num_processes", type=int, default=cpu_count(), help="Número de procesos para procesar la secuencia (Los hilos de la CPU por defecto).")
 
-print(f"Image generation time: {image_generation_time} seconds")
+    args = parser.parse_args()
+
+    main(args.file1, args.file2, args.output, args.max_length, args.num_processes)

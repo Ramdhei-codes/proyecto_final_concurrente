@@ -31,7 +31,7 @@ def generate_dotplot_parallel(seq1, seq2, window_size=1, comm=None):
         rows.extend([i] * len(matches))
         cols.extend(matches)
 
-    local_dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=int)
+    local_dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=np.uint8)
 
     # Gather all local dotplots into one at root process
     gathered_dotplots = comm.gather(local_dotplot, root=0)
@@ -42,7 +42,7 @@ def generate_dotplot_parallel(seq1, seq2, window_size=1, comm=None):
         for dp in gathered_dotplots:
             total_rows.extend(dp.row)
             total_cols.extend(dp.col)
-        dotplot = coo_matrix((np.ones(len(total_rows)), (total_rows, total_cols)), shape=(len1, len2), dtype=int)
+        dotplot = coo_matrix((np.ones(len(total_rows)), (total_rows, total_cols)), shape=(len1, len2), dtype=np.uint8)
         return dotplot.tocsr()
     else:
         return None

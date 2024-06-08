@@ -82,8 +82,8 @@ if __name__ == "__main__":
     parser.add_argument("--file1", required=True, help="Archivo FASTA de la primera secuencia.")
     parser.add_argument("--file2", required=True, help="Archivo FASTA de la segunda secuencia.")
     parser.add_argument("--output", required=True, help="Archivo de salida para la imagen del dotplot.")
-    parser.add_argument("--max_length", type=int, default=None, help="Número máximo de caracteres a procesar de cada secuencia.")
-    parser.add_argument("--num_threads", type=int, default=None, help="Número de hilos para procesar la secuencia (4 por defecto).")
+    parser.add_argument("--max_length", type=int, default=1000, help="Número máximo de caracteres a procesar de cada secuencia.")
+    parser.add_argument("--num_threads", type=int, default=4, help="Número de hilos para procesar la secuencia (4 por defecto).")
 
     args = parser.parse_args()
 
