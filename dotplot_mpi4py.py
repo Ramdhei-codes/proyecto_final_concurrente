@@ -3,7 +3,7 @@ from Bio import SeqIO
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, vstack
 from mpi4py import MPI
 import sys
 import time
@@ -22,33 +22,33 @@ def generate_dotplot_parallel(seq1, seq2, window_size=1, comm=None):
     rank = comm.Get_rank()
     size = comm.Get_size()
 
-    rows, cols = [], []
-
     seq1_array = np.array(list(seq1))
     seq2_array = np.array(list(seq2))
 
+    chunk_size = (len1 - window_size + 1) // size
+    start = rank * chunk_size
+    end = start + chunk_size if rank != size - 1 else len1 - window_size + 1
+
+    local_rows, local_cols = [], []
+
     try:
-        for i in tqdm(range(rank, len1 - window_size + 1, size), desc=f"Proceso {rank}"):
+        for i in tqdm(range(start, end), desc=f"Proceso {rank}"):
             sub_seq1 = seq1_array[i:i + window_size]
             matches = np.where((seq2_array[:len2 - window_size + 1] == sub_seq1[:, None]).all(axis=0))[0]
-            rows.extend([i] * len(matches))
-            cols.extend(matches)
+            local_rows.extend([i] * len(matches))
+            local_cols.extend(matches)
     except MemoryError:
         print(f"Error de memoria en el proceso {rank}: No es posible generar el dotplot con las secuencias dadas debido a limitaciones de memoria.")
         comm.Abort()
 
-    local_dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=np.uint8)
+    local_dotplot = coo_matrix((np.ones(len(local_rows)), (local_rows, local_cols)), shape=(len1, len2), dtype=np.uint8)
 
     # Gather all local dotplots into one at root process
     gathered_dotplots = comm.gather(local_dotplot, root=0)
 
     if rank == 0:
         # Combine all gathered dotplots into one
-        total_rows, total_cols = [], []
-        for dp in gathered_dotplots:
-            total_rows.extend(dp.row)
-            total_cols.extend(dp.col)
-        dotplot = coo_matrix((np.ones(len(total_rows)), (total_rows, total_cols)), shape=(len1, len2), dtype=np.uint8)
+        dotplot = vstack(gathered_dotplots)
         return dotplot.tocsr()
     else:
         return None
