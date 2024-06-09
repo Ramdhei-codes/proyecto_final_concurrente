@@ -3,7 +3,7 @@ from Bio import SeqIO
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, vstack
 import sys
 import multiprocessing as mp
 import time
@@ -16,9 +16,8 @@ def read_fasta(file_path, max_length=None):
             sequence = sequence[:max_length]
         return sequence
 
-def compare_subsequences(args):
+def compare_subsequences(seq1_array, seq2_array, window_size, start, end):
     """Compara sub-secuencias y devuelve las coincidencias."""
-    seq1_array, seq2_array, window_size, start, end = args
     rows, cols = [], []
     len2 = len(seq2_array)
 
@@ -37,18 +36,15 @@ def generate_dotplot(seq1, seq2, window_size=1, num_processes=4):
     seq2_array = np.array(list(seq2))
 
     chunk_size = max(1, len1 // (num_processes * 10))  # Tamaño de chunk más pequeño para mejor balance de carga
-    pool = mp.Pool(processes=num_processes)
-    tasks = [(seq1_array, seq2_array, window_size, start, min(len1, start + chunk_size))
-             for start in range(0, len1, chunk_size)]
+    with mp.Pool(processes=num_processes) as pool:
+        tasks = [(seq1_array, seq2_array, window_size, start, min(len1, start + chunk_size))
+                 for start in range(0, len1, chunk_size)]
 
-    rows, cols = [], []
-    for result in tqdm(pool.imap_unordered(compare_subsequences, tasks), total=len(tasks)):
-        r, c = result
-        rows.extend(r)
-        cols.extend(c)
-
-    pool.close()
-    pool.join()
+        rows, cols = [], []
+        for result in tqdm(pool.imap_unordered(compare_subsequences, tasks), total=len(tasks)):
+            r, c = result
+            rows.extend(r)
+            cols.extend(c)
 
     print(f"Total filas: {len(rows)}, Total columnas: {len(cols)}")  # Depuración final
     dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=int)
