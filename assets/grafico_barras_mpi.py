@@ -5,14 +5,14 @@ import numpy as np
 processes = [2, 4, 8, 16]
 
 # Datos para 10,000 caracteres
-times_total_10000 = [8.36, 7.55, 6.90, 7.21]
-times_calculation_10000 = [8.1, 7.3, 6.6, 7.0]
-times_image_10000 = [0.26, 0.25, 0.30, 0.21]
+times_total_10000 = [4.67, 3.80, 4.97, 10.01]
+times_calculation_10000 = [8.1, 2.04, 1.62, 1.73]
+times_image_10000 = [3.21, 1.70, 3.30, 8.22]
 
 # Datos para 25,000 caracteres
-times_total_25000 = [148.21, 90.33, 73.28, 84.66]
-times_calculation_25000 = [143.59, 90.33, 69.99, 81.53]  
-times_image_25000 = [4.53, 3.29, 3.20, 3.06]  
+times_total_25000 = [35.73, 29.26, 81.97, 84.66]
+times_calculation_25000 = [30.32, 16.48, 11.01, 81.53]  
+times_image_25000 = [5.35, 12.72, 70.9, 3.06]  
 
 x = np.arange(len(processes))  # las etiquetas de los ejes x para los procesos
 width = 0.3  # ancho de las barras
@@ -48,7 +48,7 @@ create_chart(times_total_25000, times_calculation_25000, times_image_25000,
 sequential_times = [5.96, 36.84]  # Adjust these if you have a specific time for 50,000 characters
 
 # Minimum MPI times extracted from your provided data
-min_mpi_times = [6.90, 73.28]  # Minimum times for 10,000 and 25,000 characters from MPI
+min_mpi_times = [3.80, 29.26]  # Minimum times for 10,000 and 25,000 characters from MPI
 
 # Labels for the plot
 sizes = ['10,000', '25,000']  # You can add '50,000' if you have that data
