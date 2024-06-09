@@ -99,4 +99,4 @@ if __name__ == "__main__":
     main(args.file1, args.file2, args.output, args.max_length, args.num_threads)
 
 # ejecutar con:  
-# python .\dotplot_hilos.py --file1 .\dotplot_files\Salmonella.fna --file2 .\dotplot_files\E_coli.fna --max_length 10000 --output .\dotplot_hilos.png
+# python .\dotplot_hilos.py --file1 .\dotplot_files\Salmonella.fna --file2 .\dotplot_files\E_coli.fna --max_length 10000 --output .\dotplot_hilos.png --num_threads 4
