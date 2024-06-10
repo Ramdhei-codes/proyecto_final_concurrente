@@ -3,7 +3,7 @@ from Bio import SeqIO
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, vstack
 import sys
 import multiprocessing as mp
 import time
@@ -16,13 +16,12 @@ def read_fasta(file_path, max_length=None):
             sequence = sequence[:max_length]
         return sequence
 
-def compare_subsequences(args):
+def compare_subsequences(seq1_array, seq2_array, window_size, start, end):
     """Compara sub-secuencias y devuelve las coincidencias."""
-    seq1_array, seq2_array, window_size, start, end = args
     rows, cols = [], []
     len2 = len(seq2_array)
 
-    for i in range(start, end, window_size):
+    for i in range(start, end):
         sub_seq1 = seq1_array[i:i + window_size]
         matches = np.where((seq2_array[:len2 - window_size + 1] == sub_seq1[:, None]).all(axis=0))[0]
         rows.extend([i] * len(matches))
@@ -30,25 +29,48 @@ def compare_subsequences(args):
 
     return rows, cols
 
+def worker(task_queue, result_queue, seq1_array, seq2_array, window_size):
+    """Trabajador para procesar tareas de subsecuencias en paralelo."""
+    while True:
+        task = task_queue.get()
+        if task is None:
+            break
+        start, end = task
+        rows, cols = compare_subsequences(seq1_array, seq2_array, window_size, start, end)
+        result_queue.put((rows, cols))
+
 def generate_dotplot(seq1, seq2, window_size=1, num_processes=4):
     """Genera una matriz dispersa de dotplot para dos secuencias utilizando multiprocessing."""
     len1, len2 = len(seq1), len(seq2)
     seq1_array = np.array(list(seq1))
     seq2_array = np.array(list(seq2))
 
+    task_queue = mp.Queue()
+    result_queue = mp.Queue()
+
     chunk_size = max(1, len1 // (num_processes * 10))  # Tamaño de chunk más pequeño para mejor balance de carga
-    pool = mp.Pool(processes=num_processes)
-    tasks = [(seq1_array, seq2_array, window_size, start, min(len1, start + chunk_size))
-             for start in range(0, len1, chunk_size)]
+    for start in range(0, len1, chunk_size):
+        end = min(len1, start + chunk_size)
+        task_queue.put((start, end))
+
+    processes = []
+    for _ in range(num_processes):
+        p = mp.Process(target=worker, args=(task_queue, result_queue, seq1_array, seq2_array, window_size))
+        p.start()
+        processes.append(p)
+
+    # Añadir tareas de parada
+    for _ in range(num_processes):
+        task_queue.put(None)
 
     rows, cols = [], []
-    for result in tqdm(pool.imap_unordered(compare_subsequences, tasks), total=len(tasks)):
-        r, c = result
+    for _ in tqdm(range((len1 + chunk_size - 1) // chunk_size), desc="Procesando"):
+        r, c = result_queue.get()
         rows.extend(r)
         cols.extend(c)
 
-    pool.close()
-    pool.join()
+    for p in processes:
+        p.join()
 
     print(f"Total filas: {len(rows)}, Total columnas: {len(cols)}")  # Depuración final
     dotplot = coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(len1, len2), dtype=int)
@@ -100,6 +122,5 @@ if __name__ == "__main__":
     
     main(args.file1, args.file2, args.output, args.max_length, args.num_processes)
 
-
 # Ejecutar el script con los argumentos necesarios
-# python multiprocessing-code.py --file1=./dotplot_files/E_coli.fna --file2=./dotplot_files/Salmonella.fna --output=dotplot_multiprocessing.png --max_length=1000
+# python prueba_multiprocessing.py --file1=./dotplot_files/E_coli.fna --file2=./dotplot_files/Salmonella.fna --output=dotplot_multiprocessing.png --max_length=1000
