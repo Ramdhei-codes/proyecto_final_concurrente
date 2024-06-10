@@ -2,12 +2,12 @@ import matplotlib.pyplot as plt
 
 # Datos de ejemplo
 # Tiempos de ejecución para diferentes números de procesadores (strong scalability)
-times_strong = [100, 60, 35, 20, 15]  # tiempos medidos en segundos
+times_strong = [36.84, 30.32, 16.48, 11.01, 81.53]  # tiempos medidos en segundos
 processors_strong = [1, 2, 4, 8, 16]  # número de procesadores correspondientes
 
 # Tiempos de ejecución para diferentes tamaños de problema y números de procesadores (weak scalability)
-times_weak = [100, 110, 115, 120, 125]  # tiempos medidos en segundos
-processors_weak = [1, 2, 4, 8, 16]  # número de procesadores correspondientes
+times_weak = [0.22, 0.52, 1.43, 4.44]  # tiempos medidos en segundos
+processors_weak = [1, 2, 4, 8]  # número de procesadores correspondientes
 
 # Función para calcular speedup (strong scalability)
 def calculate_speedup(times, processors):

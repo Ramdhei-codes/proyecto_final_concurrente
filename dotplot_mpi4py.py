@@ -16,7 +16,7 @@ def read_fasta(file_path, max_length=None):
             sequence = sequence[:max_length]
         return sequence
 
-def generate_dotplot_parallel(seq1, seq2, window_size=1, comm=None):
+def generate_dotplot_parallel(seq1, seq2, window_size=1, batch_size=1000, comm=None):
     """Genera una matriz dispersa de dotplot para dos secuencias utilizando MPI."""
     len1, len2 = len(seq1), len(seq2)
     rank = comm.Get_rank()
@@ -32,11 +32,23 @@ def generate_dotplot_parallel(seq1, seq2, window_size=1, comm=None):
     local_rows, local_cols = [], []
 
     try:
-        for i in tqdm(range(start, end), desc=f"Proceso {rank}"):
-            sub_seq1 = seq1_array[i:i + window_size]
-            matches = np.where((seq2_array[:len2 - window_size + 1] == sub_seq1[:, None]).all(axis=0))[0]
-            local_rows.extend([i] * len(matches))
-            local_cols.extend(matches)
+        for batch_start in tqdm(range(start, end, batch_size), desc=f"Proceso {rank}"):
+            batch_end = min(batch_start + batch_size, end)
+            batch_rows, batch_cols = [], []
+
+            for i in range(batch_start, batch_end):
+                sub_seq1 = seq1_array[i:i + window_size]
+                matches = np.where((seq2_array[:len2 - window_size + 1] == sub_seq1[:, None]).all(axis=0))[0]
+                batch_rows.extend([i] * len(matches))
+                batch_cols.extend(matches)
+
+            local_rows.extend(batch_rows)
+            local_cols.extend(batch_cols)
+
+            # Clear batch arrays to free memory
+            del batch_rows
+            del batch_cols
+
     except MemoryError:
         print(f"Error de memoria en el proceso {rank}: No es posible generar el dotplot con las secuencias dadas debido a limitaciones de memoria.")
         comm.Abort()
