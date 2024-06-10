@@ -64,3 +64,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.file1, args.file2, args.output, args.max_length, args.num_processes)
+#python prueba_multiprocessing.py --file1=./dotplot_files/E_coli.fna --file2=./dotplot_files/Salmonella.fna --output=dotplot_multiprocessing.png --max_length=50000 --num_processes 16
