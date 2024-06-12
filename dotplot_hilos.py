@@ -33,7 +33,13 @@ def draw_dotplot(matrix, fig_name):
     plt.imshow(matrix, cmap='Greys', interpolation='none')
     plt.ylabel("Secuencia 1")
     plt.xlabel("Secuencia 2")
-    plt.savefig(fig_name)
+    fig, ax = plt.subplots()
+
+    cax = ax.imshow(matrix, cmap='Greys', interpolation='none')
+
+    ax.axis('off')
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    plt.savefig(fig_name, bbox_inches='tight', pad_inches=0)
     plt.close()
     end_time = time.time()  # Tiempo final para la generación de la imagen
     print(f"Tiempo para generar y guardar la imagen: {end_time - start_time:.2f} segundos")
