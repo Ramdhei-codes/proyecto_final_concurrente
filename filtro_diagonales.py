@@ -59,3 +59,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     main(args.file_path, args.top_crop, args.bottom_crop, args.left_crop, args.right_crop)
+
+
+# Ejectuar el script con la siguiente línea de comandos:
+# python filtro_diagonales.py dotplot_secuencial.png 50 50 50 50
