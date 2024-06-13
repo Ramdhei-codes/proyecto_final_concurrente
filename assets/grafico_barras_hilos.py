@@ -56,7 +56,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sizes = ['10,000', '25,000', '50,000']
-sequential_times = [5.96, 36.84, 39.01]  # Tiempos secuenciales 
+sequential_times = [5.96, 36.84, 666.69]  # Tiempos secuenciales 
 best_thread_times = [1.16, 4.01, 33.70]  # Mejores tiempos multihilo
 
 x = np.arange(len(sizes))

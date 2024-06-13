@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 # Datos de ejemplo
 # Tiempos de ejecución para diferentes números de procesadores (strong scalability)
-times_strong = [36.84, 30.32, 16.48, 11.01, 81.53]  # tiempos medidos en segundos
+times_strong = [5.96, 5.9, 3.9, 3.19, 3.71]  # tiempos medidos en segundos
 processors_strong = [1, 2, 4, 8, 16]  # número de procesadores correspondientes
 
 # Tiempos de ejecución para diferentes tamaños de problema y números de procesadores (weak scalability)
@@ -47,4 +47,4 @@ plt.title('Weak Scalability')
 plt.grid(True)
 
 plt.tight_layout()
-plt.show()
+plt.savefig('assets/imgs/escalabilidad')
