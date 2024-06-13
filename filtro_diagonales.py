@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from multiprocessing import Pool, cpu_count
 import matplotlib.pyplot as plt
+import argparse
 
 def load_image(file_path):
     """Carga la imagen en escala de grises."""
@@ -49,9 +50,12 @@ def main(file_path, top_crop, bottom_crop, left_crop, right_crop):
     plt.show()
 
 if __name__ == "__main__":
-    file_path = "./dotplot_secuencial.png"
-    top_crop = 57      # Ajusta este valor según sea necesario
-    bottom_crop = 50   # Ajusta este valor según sea necesario
-    left_crop = 142     # Ajusta este valor según sea necesario
-    right_crop = 130    # Ajusta este valor según sea necesario
-    main(file_path, top_crop, bottom_crop, left_crop, right_crop)
+    parser = argparse.ArgumentParser(description="Filtrar diagonales en un dotplot.")
+    parser.add_argument("file_path", type=str, help="Ruta al archivo de imagen.")
+    parser.add_argument("top_crop", type=int, help="Número de píxeles a recortar desde arriba.")
+    parser.add_argument("bottom_crop", type=int, help="Número de píxeles a recortar desde abajo.")
+    parser.add_argument("left_crop", type=int, help="Número de píxeles a recortar desde la izquierda.")
+    parser.add_argument("right_crop", type=int, help="Número de píxeles a recortar desde la derecha.")
+    
+    args = parser.parse_args()
+    main(args.file_path, args.top_crop, args.bottom_crop, args.left_crop, args.right_crop)
