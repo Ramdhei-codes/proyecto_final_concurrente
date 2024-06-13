@@ -33,6 +33,16 @@ def draw_dotplot(matrix, fig_name):
     plt.imshow(matrix, cmap='Greys', interpolation='none')
     plt.ylabel("Secuencia 1")
     plt.xlabel("Secuencia 2")
+    plt.savefig(fig_name)
+    plt.close()
+    end_time = time.time()  # Tiempo final para la generación de la imagen
+    print(f"Tiempo para generar y guardar la imagen: {end_time - start_time:.2f} segundos")
+
+def draw_dotplot_no_borders(matrix, fig_name):
+    start_time = time.time()  # Tiempo inicial para la generación de la imagen
+    plt.imshow(matrix, cmap='Greys', interpolation='none')
+    plt.ylabel("Secuencia 1")
+    plt.xlabel("Secuencia 2")
     fig, ax = plt.subplots()
 
     cax = ax.imshow(matrix, cmap='Greys', interpolation='none')
@@ -88,6 +98,7 @@ def main(file1, file2, output_file, max_length, num_threads=4):
     print(f"Tiempo de cálculo para generar el dotplot: {calc_end_time - start_time:.2f} segundos")
 
     draw_dotplot(dotplot, output_file)
+    draw_dotplot_no_borders(dotplot, f'to_filter{output_file}')
 
     end_time = time.time()  # Tiempo final para la ejecución del programa
     print(f"Tiempo total de ejecución del programa: {end_time - start_time:.2f} segundos")

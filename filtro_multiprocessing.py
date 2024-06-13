@@ -5,14 +5,14 @@ import matplotlib.pyplot as plt
 
 def load_image(file_path):
     """Carga la imagen en escala de grises."""
-    image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+    image = cv2.imread(file_path)
     return image
 
 def filter_diagonals(image):
     """Aplica un filtro para resaltar las diagonales."""
-    kernel = np.array([[1, 0, -1],
+    kernel = np.array([[1, 0, 0],
                        [0, 1, 0],
-                       [-1, 0, 1]])
+                       [0, 0, 1]], dtype=np.uint8)
     filtered_image = cv2.filter2D(image, -1, kernel)
     return filtered_image
 
@@ -46,5 +46,5 @@ def main(file_path):
     plt.show()
 
 if __name__ == "__main__":
-    file_path = "./dotplot_secuencial.png"
+    file_path = "./dotplot_hilos.png"
     main(file_path)
