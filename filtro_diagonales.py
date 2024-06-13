@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def load_image(file_path):
     """Carga la imagen en escala de grises."""
-    image = cv2.imread(file_path)
+    image = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
     return image
 
 def filter_diagonals(image):
@@ -29,7 +29,7 @@ def merge_chunks(chunks):
     """Combina los fragmentos procesados en una sola imagen."""
     return np.vstack(chunks)
 
-def main(file_path):
+def main(file_path, top_crop, bottom_crop, left_crop, right_crop):
     image = load_image(file_path)
     num_chunks = cpu_count()
     chunks = divide_chunks(image, num_chunks)
@@ -39,6 +39,9 @@ def main(file_path):
     
     filtered_image = merge_chunks(processed_chunks)
     
+    # Recortar la imagen
+    filtered_image = filtered_image[top_crop:filtered_image.shape[0]-bottom_crop, left_crop:filtered_image.shape[1]-right_crop]
+    
     plt.imshow(filtered_image, cmap='gray')
     plt.title("Diagonales Identificadas en el Dotplot")
     plt.xlabel("Secuencia 2")
@@ -46,5 +49,9 @@ def main(file_path):
     plt.show()
 
 if __name__ == "__main__":
-    file_path = "./dotplot_hilos.png"
-    main(file_path)
+    file_path = "./dotplot_secuencial.png"
+    top_crop = 57      # Ajusta este valor según sea necesario
+    bottom_crop = 50   # Ajusta este valor según sea necesario
+    left_crop = 142     # Ajusta este valor según sea necesario
+    right_crop = 130    # Ajusta este valor según sea necesario
+    main(file_path, top_crop, bottom_crop, left_crop, right_crop)
