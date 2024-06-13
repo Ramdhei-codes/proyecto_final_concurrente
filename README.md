@@ -67,6 +67,13 @@ main(args.file1, args.file2, args.output, args.max_length, args.block_size)
 - Este dotplot se recomienda ejecutarlo en google colab debido a que pycuda utiliza la GPU y la que nos presta este entorno tiene una buna capacidad de procesamiento,
 el enlace al colab en caso de querer probarlo allí es https://colab.research.google.com/drive/1nWXGivroH174YhhpeT9NmKySMeng0j3H?usp=sharing, en otro caso se puede abrir en el navegador el archivo dotplot_pycda.ipynb que se encuentra en la carpeta raíz del proyecto, donde lo unico que debe hacerse para ambos casos de prueba es subir los archivos fasta que se encuentran en la carpeta dotplot_files y corregir las rutas según lo necesario.
 
+### Ejecución filtro diagonales
+- Para aplicar el filtro a cualquiera de las imagenes ejecutamos:
+```bash
+python filtro_diagonales.py ./dotplot.png 57 50 142 130
+``` 
+- Los número hacen referencia al recorte de la imagen tanto en su parte superior como inferior y laterales
+
 ### Contribución
 - Haz un fork del proyecto.
 - Crea una nueva rama (git checkout -b feature/nueva-caracteristica).
